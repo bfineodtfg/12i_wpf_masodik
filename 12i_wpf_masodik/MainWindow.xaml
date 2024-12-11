@@ -80,12 +80,14 @@
                     Grid.Column="1"
                     TextAlignment="Center"
                     VerticalAlignment="Center"
-                    >Végösszeg: </TextBlock>
+                    Name="sum"
+                    >Végösszeg: 0 forint</TextBlock>
                 <Button
                     Grid.Column="1"
                     Grid.Row="1"
                     Margin="10"
                     Background="LimeGreen"
+                    Click="Buy"
                     >Kifizetés
                 </Button>
             </Grid>

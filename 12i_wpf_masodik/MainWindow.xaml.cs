@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -9,7 +10,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
+using Newtonsoft.Json;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
@@ -20,17 +21,39 @@ namespace _12i_wpf_masodik
     /// </summary>
     public partial class MainWindow : Window
     {
+        int sumNum = 0;
+        List<Disz> allDisz = new List<Disz>();
+        Dictionary<int, int> soldItems = new Dictionary<int, int>();
         public MainWindow()
         {
             InitializeComponent();
-            Test();
+            Load();
+            //Test();
         }
         void Test()
         {
             Disz disz = new Disz() { name = "Kolbász", price = 2000, stock = 50000 };
             CreateStoreItem(disz);
             CreateStoreItem(disz);
-
+        }
+        async void Load() {
+            HttpClient client = new HttpClient();
+            try
+            {
+                string url = "http://127.1.1.1:3000/disz";
+                HttpResponseMessage response = await client.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+                string responseMessage = await response.Content.ReadAsStringAsync();
+                allDisz = JsonConvert.DeserializeObject<List<Disz>>(responseMessage);
+                foreach (Disz item in allDisz)
+                {
+                    CreateStoreItem(item);
+                }
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show(e.Message);
+            }
         }
         void CreateStoreItem(Disz oneDisz)
         {
@@ -83,7 +106,25 @@ namespace _12i_wpf_masodik
 
             buyButton.Click += (s, e) =>
             {
-                CreateCartItem(oneDisz, countBox.Text);
+                if (soldItems.ContainsKey(oneDisz.id))
+                {
+                    MessageBox.Show("Már megvetted ezt az elemet");
+                }
+                else
+                {
+                    soldItems.Add(oneDisz.id, int.Parse(countBox.Text));
+                    if (int.Parse(countBox.Text) <= oneDisz.stock)
+                    {
+                        CreateCartItem(oneDisz, countBox.Text);
+                        sumNum += oneDisz.price * int.Parse(countBox.Text);
+                        UpdateSum();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Nincs elegendő készlet");
+                    }
+                }
+                
             };
 
             name.TextAlignment = TextAlignment.Center;
@@ -92,6 +133,9 @@ namespace _12i_wpf_masodik
             countBox.TextAlignment = TextAlignment.Center;
 
             countBox.Margin = new Thickness(5, 0, 5, 5);
+        }
+        void UpdateSum() {
+            sum.Text = $"Végösszeg: {sumNum} forint";
         }
         void CreateCartItem(Disz oneDisz, string num)
         {
@@ -150,16 +194,26 @@ namespace _12i_wpf_masodik
 
             moreButton.Click += (s, e) =>
             {
-                int currentValue = int.Parse(countBox.Text);
-                currentValue++;
-                countBox.Text = currentValue.ToString();
+                if (int.Parse(countBox.Text) <= oneDisz.stock)
+                {
+                    soldItems[oneDisz.id]++;
+                    int currentValue = int.Parse(countBox.Text);
+                    currentValue++;
+                    countBox.Text = currentValue.ToString();
+                    sumNum += oneDisz.price;
+                    UpdateSum();
+                }
             };
             lessButton.Click += (s, e) =>
             {
                 int currentValue = int.Parse(countBox.Text);
                 currentValue--;
+                sumNum -= oneDisz.price;
+                UpdateSum();
+                soldItems[oneDisz.id]--;
                 if (currentValue < 1)
                 {
+                    soldItems.Remove(oneDisz.id);
                     Cart.Children.Remove(oneBorder);
                 }
                 countBox.Text = currentValue.ToString();
@@ -171,6 +225,9 @@ namespace _12i_wpf_masodik
             countBox.TextAlignment = TextAlignment.Center;
 
             countBox.Margin = new Thickness(5, 0, 5, 5);
+        }
+        void Buy(Object s, EventArgs e) {
+            
         }
     }
 }
